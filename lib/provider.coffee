@@ -12,8 +12,8 @@ importantPrefixPattern = /(![a-z]+)$/
 cssDocsURL = "https://developer.mozilla.org/en-US/docs/Web/CSS"
 
 module.exports =
-  selector: '.source.css, .source.sass'
-  disableForSelector: '.source.css .comment, .source.css .string, .source.sass .comment, .source.sass .string'
+  selector: '.source.css, .source.sass, .source.css.postcss'
+  disableForSelector: '.source.css .comment, .source.css .string, .source.sass .comment, .source.sass .string, .source.css.postcss .comment, source.css.postcss .string'
   properties: COMPLETIONS.properties
   pseudoSelectors: COMPLETIONS.pseudoSelectors
   tags: COMPLETIONS.tags
@@ -68,6 +68,8 @@ module.exports =
     (hasScope(previousScopesArray, 'meta.property-value.css')) or
     (hasScope(scopes, 'meta.property-list.scss') and prefix.trim() is ":") or
     (hasScope(previousScopesArray, 'meta.property-value.scss')) or
+    (hasScope(scopes, 'meta.property-list.postcss') and prefix.trim() is ":") or
+    (hasScope(previousScopesArray, 'meta.property-value.postcss')) or
     (hasScope(scopes, 'source.sass') and (hasScope(scopes, 'meta.property-value.sass') or
       (not hasScope(beforePrefixScopesArray, 'entity.name.tag.css') and
        not hasScope(beforePrefixScopesArray, 'entity.name.tag.css.sass') and prefix.trim() is ":")
@@ -78,12 +80,16 @@ module.exports =
     scopes = scopeDescriptor.getScopesArray()
     isAtTerminator = prefix.endsWith(';')
     isAtParentSymbol = prefix.endsWith('&')
+    isVariable = hasScope(scopes, 'variable.css') or
+      hasScope(scopes, 'variable.scss') or
+      hasScope(scopes, 'variable.var.postcss')
     isInPropertyList = not isAtTerminator and
       (hasScope(scopes, 'meta.property-list.css') or
-      hasScope(scopes, 'meta.property-list.scss'))
+      hasScope(scopes, 'meta.property-list.scss') or
+      hasScope(scopes, 'meta.property-list.postcss'))
 
     return false unless isInPropertyList
-    return false if isAtParentSymbol
+    return false if isAtParentSymbol or isVariable
 
     previousBufferPosition = [bufferPosition.row, Math.max(0, bufferPosition.column - prefix.length - 1)]
     previousScopes = editor.scopeDescriptorForBufferPosition(previousBufferPosition)
@@ -94,12 +100,18 @@ module.exports =
       hasScope(previousScopesArray, 'entity.other.attribute-name.id') or
       hasScope(previousScopesArray, 'entity.other.attribute-name.parent-selector.css') or
       hasScope(previousScopesArray, 'entity.name.tag.reference.scss') or
-      hasScope(previousScopesArray, 'entity.name.tag.scss')
+      hasScope(previousScopesArray, 'entity.name.tag.scss') or
+      hasScope(previousScopesArray, 'entity.name.tag.reference.postcss') or
+      hasScope(previousScopesArray, 'entity.name.tag.postcss')
 
     isAtBeginScopePunctuation = hasScope(scopes, 'punctuation.section.property-list.begin.bracket.curly.css') or
-      hasScope(scopes, 'punctuation.section.property-list.begin.bracket.curly.scss')
+      hasScope(scopes, 'punctuation.section.property-list.begin.bracket.curly.scss') or
+      hasScope(scopes, 'punctuation.section.property-list.begin.bracket.curly.postcss') or
+      hasScope(scopes, 'punctuation.section.property-list.begin.postcss') or
     isAtEndScopePunctuation = hasScope(scopes, 'punctuation.section.property-list.end.bracket.curly.css') or
-      hasScope(scopes, 'punctuation.section.property-list.end.bracket.curly.scss')
+      hasScope(scopes, 'punctuation.section.property-list.end.bracket.curly.scss') or
+      hasScope(scopes, 'punctuation.section.property-list.end.bracket.curly.postcss') or
+      hasScope(scopes, 'punctuation.section.property-list.end.postcss') or
 
     if isAtBeginScopePunctuation
       # * Disallow here: `canvas,|{}`
@@ -131,9 +143,10 @@ module.exports =
 
     if hasScope(scopes, 'meta.selector.css') or hasScope(previousScopesArray, 'meta.selector.css')
       true
-    else if hasScope(scopes, 'source.css.scss') or hasScope(scopes, 'source.css.less')
+    else if hasScope(scopes, 'source.css.scss') or hasScope(scopes, 'source.css.less') or hasScope(scopes, 'source.css.postcss')
       not hasScope(previousScopesArray, 'meta.property-value.scss') and
         not hasScope(previousScopesArray, 'meta.property-value.css') and
+        not hasScope(previousScopesArray, 'meta.property-value.postcss') and
         not hasScope(previousScopesArray, 'support.type.property-value.css')
     else
       false
@@ -145,7 +158,7 @@ module.exports =
     previousScopesArray = previousScopes.getScopesArray()
     if (hasScope(scopes, 'meta.selector.css') or hasScope(previousScopesArray, 'meta.selector.css')) and not hasScope(scopes, 'source.sass')
       true
-    else if hasScope(scopes, 'source.css.scss') or hasScope(scopes, 'source.css.less') or hasScope(scopes, 'source.sass')
+    else if hasScope(scopes, 'source.css.scss') or hasScope(scopes, 'source.css.less') or hasScope(scopes, 'source.sass') or hasScope(scopes, 'source.css.postcss')
       prefix = @getPseudoSelectorPrefix(editor, bufferPosition)
       if prefix
         previousBufferPosition = [bufferPosition.row, Math.max(0, bufferPosition.column - prefix.length - 1)]
@@ -153,8 +166,10 @@ module.exports =
         previousScopesArray = previousScopes.getScopesArray()
         not hasScope(previousScopesArray, 'meta.property-name.scss') and
           not hasScope(previousScopesArray, 'meta.property-value.scss') and
+          not hasScope(previousScopesArray, 'meta.property-value.postcss') and
           not hasScope(previousScopesArray, 'support.type.property-name.css') and
-          not hasScope(previousScopesArray, 'support.type.property-value.css')
+          not hasScope(previousScopesArray, 'support.type.property-value.css') and
+          not hasScope(previousScopesArray, 'support.type.property-name.postcss')
       else
         false
     else
